@@ -137,10 +137,8 @@ function submitForm(pi,ans,res){
   d.append(FIELD_IDS.d5Score,(res.dimScores.d5||0).toFixed(2));d.append(FIELD_IDS.overallLevel,LL[res.profLevel]);
   d.append(FIELD_IDS.recommendedTrack,"Track "+res.primary+": "+TRACKS[res.primary].name);
   d.append(FIELD_IDS.secondaryTrack,res.secondary?"Track "+res.secondary+": "+TRACKS[res.secondary].name:"None");
-  const ifr=document.createElement("iframe");ifr.name="hif";ifr.style.display="none";document.body.appendChild(ifr);
-  const f=document.createElement("form");f.method="POST";f.action=GOOGLE_FORM_URL;f.target="hif";
-  for(const[k,v]of d.entries()){const inp=document.createElement("input");inp.type="hidden";inp.name=k;inp.value=v;f.appendChild(inp);}
-  document.body.appendChild(f);f.submit();setTimeout(()=>{try{document.body.removeChild(f);document.body.removeChild(ifr);}catch(e){}},3000);
+  // Use fetch with no-cors mode — Google Forms accepts this cross-origin
+  fetch(GOOGLE_FORM_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:d.toString()}).catch(function(e){console.log("Form submission error:",e);});
 }
 
 // ═══ STYLES ═══
