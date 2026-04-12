@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Readiness Assessment | LARC AI Literacy &amp; Innovation Program</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #EFF1F4; }
+    button { font-family: inherit; }
+    input { font-family: inherit; }
+    a { font-family: inherit; }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary { list-style: none; }
+    details .chv { transition: transform 0.2s ease; }
+    details[open] .chv { transform: rotate(180deg); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+// ═══ CONFIG ═══
+const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc0_aqlAFRHO6qDGtVGpXZAFOKPpWjQZ7PwLcuPryhAYCQFVA/formResponse";
+const FIELD_IDS = {
+  name:"entry.411210507", campus:"entry.845789961", email:"entry.1072243110", assessmentType:"entry.1209832955",
+  p1:"entry.1771350738", p1b:"entry.223805002", p2:"entry.84731627", p2b:"entry.1636960247",
+  p3:"entry.1366947473", p3b:"entry.224045060", p4:"entry.365970988", p4b:"entry.1181110733",
+  p5:"entry.1410226631", p5b:"entry.550139022",
+  c1:"entry.204320622", c2:"entry.958989177", c3:"entry.467593948", c4:"entry.670172321",
+  g1:"entry.800383919", g2:"entry.1055920360", g3:"entry.1732792576",
+  d1Score:"entry.1486028483", d2Score:"entry.1450208813", d3Score:"entry.1062127624",
+  d4Score:"entry.1003971799", d5Score:"entry.1278529954",
+  overallLevel:"entry.278194490", recommendedTrack:"entry.2039488656", secondaryTrack:"entry.673640040",
+};
+// ← REPLACE # with your Canvas Program Dashboard URL after publishing
+const DASHBOARD_URL = "#";
+
+// ═══ COLORS ═══
+const C = {
+  navy:"#003366", gold:"#FFB81C", cream:"#FAFAF7", white:"#FFFFFF",
+  text:"#1A1A1A", textMid:"#444", textLight:"#555", textMuted:"#888",
+  border:"#D9D9D9", borderLight:"#E5E7EB",
+  t1:"#003366", t2:"#0F6E56", t3:"#854F0B", t4:"#1A6B5C",
+  d1:"#534AB7", d2:"#0F6E56", d3:"#185FA5", d4:"#A32D2D", d5:"#854F0B",
+};
+
+const TRACKS = {
+  1:{name:"Research & Professional Development",color:C.t1,desc:"Build foundational AI knowledge, explore tools with ethical awareness, and work toward a nationally recognized AI credential.",audience:"Faculty new to AI or early in their learning journey",exit:"AI Literacy",phases:["Awareness — Understand what AI is and why it matters","Literacy — Explore tools, ethics, and responsible use frameworks","Application — Hands-on practice with AI tools in professional context","Credentialing — Earn a nationally recognized AI credential"]},
+  2:{name:"Curriculum Development",color:C.t2,desc:"Integrate AI into course outcomes, assignment design, and course outlines through formal curriculum revision.",audience:"Faculty ready to revise or develop a course",exit:"AI Curriculum Competency",phases:["Review existing COR and identify AI integration opportunities","Draft revised SLOs, assignments, and course components","Peer review and curriculum committee preparation","Submit revised curriculum through governance channels"]},
+  3:{name:"Instructional Practice Integration",color:C.t3,desc:"Design, deploy, and reflect on AI-enhanced classroom experiences within existing courses — no COR revision required.",audience:"Faculty experimenting with AI in active courses",exit:"Applied AI Fluency",phases:["Design — Select a lesson, choose a tool, plan the integration","Deploy — Try it in a live course, document what happens","Reflect — Analyze outcomes, share with peers, iterate"]},
+  4:{name:"AI Professional Development Architecture",color:C.t4,desc:"Study successful train-the-trainer models and collaboratively shape AI faculty development for the LA-19 region.",audience:"Faculty with AI experience or leadership interest",exit:"AI PD Architect",phases:["Learn — Study exemplar programs nationally and statewide","Design — Articulate principles and prototype frameworks","Prototype — Build and test a concrete PD session or CoP plan","Reflect — Synthesize collective work and plan forward"]},
+};
+
+const DIMS = [
+  {id:"d1",label:"D1 · Knowledge",color:C.d1,what:"Understanding AI concepts, terminology, and how AI systems work"},
+  {id:"d2",label:"D2 · Application",color:C.d2,what:"Using AI tools effectively for professional and instructional tasks"},
+  {id:"d3",label:"D3 · Evaluation",color:C.d3,what:"Assessing AI outputs for accuracy, bias, and fitness for purpose"},
+  {id:"d4",label:"D4 · Ethics",color:C.d4,what:"Navigating privacy, transparency, academic integrity, and responsible use"},
+  {id:"d5",label:"D5 · Leadership",color:C.d5,what:"Sharing expertise, connecting AI to your discipline, and leading others"},
+];
+
+const PQS = [
+  {id:"p1",dim:"d1",text:"I can explain what generative AI is and how it differs from other types of software to a colleague who has never used it.",opts:["Not yet — I'm still learning what AI is","Somewhat — I have a general idea but couldn't explain it clearly","Yes — I could explain it confidently with examples","Strongly — I regularly explain AI concepts to others and stay current"]},
+  {id:"p1b",dim:"d1",text:"I understand the difference between a large language model (LLM), a chatbot interface, and an AI agent — and can explain why the distinction matters for educational use.",opts:["These terms are unfamiliar to me","I've heard them but couldn't explain the differences","I can explain the basic differences and why they matter","I can explain these concepts and discuss how each applies to different instructional contexts"]},
+  {id:"p2",dim:"d2",text:"I have used AI tools (ChatGPT, Gemini, Copilot, NotebookLM, PlayLab, etc.) for professional tasks — not just casual experimentation.",opts:["I haven't tried any AI tools yet","I've experimented casually but not for professional work","I use AI tools regularly for course prep, grading support, or content creation","I've configured or customized AI tools for specific instructional purposes"]},
+  {id:"p2b",dim:"d2",text:"I understand what prompt engineering is and can write effective prompts that include context, constraints, role assignment, and output formatting.",opts:["I don't know what prompt engineering means","I've heard the term but mostly use simple, unstructured prompts","I write structured prompts with context and constraints and iterate based on results","I teach prompt engineering techniques to students or colleagues"]},
+  {id:"p3",dim:"d3",text:"When an AI tool gives me a response, I can evaluate whether the output is accurate, biased, or incomplete.",opts:["I wouldn't know how to evaluate AI output systematically","I sometimes notice errors but don't have a consistent approach","I consistently evaluate AI outputs for accuracy, bias, and completeness","I teach students how to critically evaluate AI-generated content"]},
+  {id:"p3b",dim:"d3",text:"I can identify when an AI tool is 'hallucinating' and understand strategies like retrieval-augmented generation (RAG) or source-grounding that reduce this risk.",opts:["I'm not sure what AI hallucination means","I know AI can make things up but I'm not familiar with technical strategies to address it","I can identify hallucinations and know that tools like NotebookLM use source-grounding to reduce them","I understand the technical mechanisms and factor this into my tool selection and student guidance"]},
+  {id:"p4",dim:"d4",text:"I can articulate specific ethical concerns about using AI in higher education — including data privacy, algorithmic bias, and academic integrity.",opts:["I'm aware there are ethical issues but can't articulate specific ones","I can name a few concerns but haven't developed a clear position","I have a clear position on AI ethics and communicate it to students","I've contributed to institutional AI policy or ethics guidelines"]},
+  {id:"p4b",dim:"d4",text:"I have developed (or could develop) a clear AI transparency statement for my courses that explains permitted uses, boundaries, and how student data is handled.",opts:["I haven't thought about this yet","I know I should address this but haven't created anything formal","I have an AI use statement in my syllabus that addresses transparency and expectations","I have a comprehensive AI policy and I've helped colleagues develop theirs"]},
+  {id:"p5",dim:"d5",text:"I have shared AI strategies, tools, or insights with colleagues — through conversations, presentations, or mentoring.",opts:["I haven't shared anything yet — I'm still figuring it out myself","I've had informal conversations about AI with a few colleagues","I've presented on AI at department meetings, flex days, or PD events","I've led or organized AI professional development for others"]},
+  {id:"p5b",dim:"d5",text:"I can describe how AI is changing my specific discipline or industry sector and articulate what students need to know to be workforce-ready.",opts:["I haven't thought about AI's impact on my specific discipline yet","I have a general sense that AI is affecting my field but can't be specific","I can name specific AI applications in my discipline and connect them to course content","I actively incorporate industry AI trends into my teaching and advise colleagues on workforce implications"]},
+];
+
+const CQS = [
+  {id:"c1",text:"Which best describes your current teaching situation?",opts:["I am not currently teaching (sabbatical, admin role, or other)","I am teaching but have not integrated any AI into my courses","I am teaching and have started experimenting with AI informally","I am teaching and actively use AI tools with intentional design"]},
+  {id:"c2",text:"Are you currently involved in curriculum development or revision?",opts:["No — I focus on teaching, not curriculum governance","Not yet, but I'm interested in revising my course(s) to include AI","Yes — I am planning or in the process of a COR revision","Yes — I've already completed a curriculum revision incorporating AI"]},
+  {id:"c3",text:"Have you led or been asked to lead professional development for colleagues?",opts:["No, and I'm not interested in that role right now","No, but I would be open to it in the future","Yes — I've led PD sessions on teaching topics (not AI-specific)","Yes — I've led or organized AI-specific PD for colleagues"]},
+  {id:"c4",text:"Which AI tools have you used?",opts:["I have not used any AI tools","General tools like ChatGPT or Gemini for personal exploration","AI tools for professional tasks — Gemini, NotebookLM, Copilot, etc.","Specialized education AI platforms — PlayLab, Khanmigo, Nectir, or sector-specific tools"]},
+];
+
+const GQS = [
+  {id:"g1",text:"What is your primary goal for participating in this program?",opts:["Build my own foundational understanding of AI","Start using AI tools in a course I currently teach","Formally revise my curriculum to incorporate AI","Help other faculty at my campus adopt AI"]},
+  {id:"g2",text:"How soon do you want to see results from your participation?",opts:["I'm in no rush — I want to learn thoroughly at my own pace","This semester — I want to try something in an active course","This academic year — I want a revised curriculum or completed portfolio","Next semester — I want to launch PD or a CoP at my campus"]},
+  {id:"g3",text:"Which interests you most?",opts:["Earning a nationally recognized AI credential","Building an AI-enhanced lesson and deploying it in my course","Redesigning my course outline of record to formally integrate AI","Studying how other institutions scale AI PD and contributing to regional strategy"]},
+];
+
+const RES = {
+  googleEssentials:{name:"Google AI Essentials Certificate",desc:"Free through the CCC–Google partnership.",url:"https://grow.google/certificates/ai-essentials/"},
+  googlePro:{name:"Google AI Professional Certificate",desc:"Extended credential via Coursera.",url:null},
+  comptia:{name:"CompTIA AI+ Certification",desc:"Vendor-neutral AI certification.",url:null},
+  playlab:{name:"PlayLab AI Platform",desc:"Build custom AI chatbots. Chancellor's Office PlayLab PLC.",url:"https://playlab.ai"},
+  notebooklm:{name:"NotebookLM",desc:"AI-powered study resources from uploaded materials.",url:"https://notebooklm.google.com"},
+  gemini:{name:"Gemini",desc:"Google's AI assistant for all CCC faculty.",url:"https://gemini.google.com"},
+  khanmigo:{name:"Khanmigo for Teachers",desc:"Free AI teaching tools via Microsoft partnership.",url:"https://www.khanmigo.ai"},
+  nectir:{name:"Nectir AI",desc:"FERPA-compliant AI course assistants.",url:"https://www.nectir.io"},
+  sectorPathways:{name:"Your Sector Pathway Page",desc:"Discipline-specific AI tools and integration strategies.",url:null},
+  cvcone:{name:"CVC@ONE AI Train-the-Trainer CoP",desc:"Cohort program for campus AI community of practice leaders.",url:"https://onlinenetworkofeducators.org/ai-cop-3/"},
+  playlabT3:{name:"PlayLab T3 Train-the-Trainer",desc:"Chancellor's Office certification for AI trainers.",url:"https://playlab-education.github.io/ccc-landing/"},
+  naaic:{name:"NAAIC Resource Hub",desc:"Free national consortium curriculum resources.",url:"https://www.naaic.ai/resources"},
+  ccccoHub:{name:"Chancellor's Office AI PD Hub",desc:"System-level AI professional development.",url:"https://ai.cccco.edu/professional-development-and-learning-opportunities/"},
+  cop:{name:"Community of Practice",desc:"Regional discussion boards and sector cohort groups.",url:null},
+};
+
+function s2l(s){return s<=0.8?0:s<=1.6?1:s<=2.4?2:3;}
+const LL=["Novice","Developing","Proficient","Advanced"];
+const LC=["#A32D2D","#854F0B","#185FA5","#0F6E56"];
+
+function compute(ans){
+  const ds={},dc={};
+  PQS.forEach(q=>{ds[q.dim]=(ds[q.dim]||0)+(ans[q.id]||0);dc[q.dim]=(dc[q.dim]||0)+1;});
+  Object.keys(ds).forEach(d=>{ds[d]/=dc[d];});
+  const avg=Object.values(ds).reduce((a,b)=>a+b,0)/5;
+  const c=CQS.map(q=>ans[q.id]||0), g=GQS.map(q=>ans[q.id]||0);
+  const[t,cu,pd,te]=c,[pg,tl,it]=g;
+  let p=1,s=null,r=[],rs=[];
+  if(avg<=1){p=1;r.push("Your responses indicate you're in the early stages of your AI journey. Several concepts assessed — like prompt engineering, AI hallucination, retrieval-augmented generation, and the LLM/chatbot/agent distinction — are still new territory. Track 1 is designed specifically for this stage.");r.push("You'll build foundational knowledge across all five competency dimensions, with optional credentialing pathways including Google AI Essentials (free through the CCC–Google partnership).");rs.push("googleEssentials","gemini","ccccoHub","cop");if(it===0)rs.push("comptia","googlePro");}
+  else if(avg<=1.8){if(pg===0||it===0){p=1;r.push("You have some AI experience, but your self-assessment shows gaps in output evaluation, technical vocabulary, and ethical frameworks. Track 1 fills those gaps systematically.");rs.push("googleEssentials","gemini","notebooklm","ccccoHub");if(t>=2){s=3;rs.push("playlab");}}else if((pg===1||it===1)&&t>=2){p=3;r.push("You have developing proficiency and want to apply it in an active course. Track 3 lets you experiment within your existing curriculum — designing, deploying, and reflecting on an AI-enhanced lesson without COR revision.");r.push("The Tool Lab module (3.3) provides guided setup for PlayLab, NotebookLM, Gemini, and sector-specific tools — matching your current experience level.");rs.push("playlab","notebooklm","gemini","sectorPathways","cop");}else if(pg===2||it===2){p=2;s=3;r.push("Your interest in formal curriculum revision makes Track 2 a strong fit. You'll integrate AI into your COR with structured peer review and governance preparation.");rs.push("gemini","notebooklm","sectorPathways","cop");}else{p=1;r.push("Based on your proficiency level and the areas where your self-assessment showed uncertainty, Track 1 will give you the strongest foundation.");rs.push("googleEssentials","gemini","ccccoHub");if(t>=2)s=3;}}
+  else if(avg<=2.5){if(pg===1||it===1||(t>=2&&cu<=1)){p=3;r.push("You have solid AI proficiency — you can explain core concepts, write effective prompts, evaluate outputs, and articulate ethical considerations. Track 3 puts that knowledge to work in your classroom.");rs.push("playlab","notebooklm","gemini","nectir","sectorPathways","cop");if(te<=1)rs.push("khanmigo");}else if(pg===2||it===2||cu>=2){p=2;s=3;r.push("Your proficiency is solid and your goals center on curriculum. Track 2 channels your AI expertise into formal COR revision aligned with the Chancellor's Office competency framework.");rs.push("gemini","notebooklm","sectorPathways","cop");}else if(pg===3||it===3||pd>=2){p=4;s=3;r.push("Your proficiency and leadership interest position you well for Track 4. You'll study programs like the CVC@ONE AI CoP, PlayLab T3, and NAAIC — then collaboratively design PD frameworks for the LA-19.");rs.push("cvcone","playlabT3","naaic","ccccoHub","cop");}else{p=3;r.push("With your AI experience and active teaching context, Track 3 gives you the most immediate, tangible impact.");rs.push("playlab","notebooklm","gemini","sectorPathways","cop");}}
+  else{if(pd>=2||pg===3||it===3){p=4;r.push("You're an experienced AI practitioner with strong scores across all five competency dimensions. Track 4 shifts from individual practice to regional impact through collaborative PD architecture.");rs.push("cvcone","playlabT3","naaic","ccccoHub","cop");if(t>=2&&cu<=1){s=3;rs.push("playlab");}}else if(pg===2||it===2){p=2;r.push("Despite advanced proficiency, your goals center on formal curriculum revision. Track 2 provides the structured governance process.");rs.push("gemini","notebooklm","sectorPathways","cop");}else if(pg===1||it===1){p=3;r.push("You have advanced knowledge and want to focus on classroom integration. Track 3 provides the structure to design, deploy, and document AI-enhanced instruction.");rs.push("playlab","notebooklm","gemini","nectir","khanmigo","sectorPathways","cop");}else{p=4;r.push("Your advanced proficiency makes you a natural fit for Track 4's system-level design work.");rs.push("cvcone","playlabT3","naaic","ccccoHub","cop");}}
+  if(s)r.push("You may also benefit from Track "+s+" ("+TRACKS[s].name+"). Many participants engage with more than one track.");
+  return{primary:p,secondary:s,avgProf:avg,dimScores:ds,rationale:r,profLevel:s2l(avg),resources:[...new Set(rs)]};
+}
+
+function submitForm(pi,ans,res){
+  if(GOOGLE_FORM_URL.indexOf("PASTE")!==-1){console.log("Google Forms not configured. Data:",{pi,ans,res});return;}
+  const d=new URLSearchParams();
+  d.append(FIELD_IDS.name,pi.name||"");d.append(FIELD_IDS.campus,pi.campus||"");d.append(FIELD_IDS.email,pi.email||"");d.append(FIELD_IDS.assessmentType,pi.assessmentType||"Pre-Assessment");
+  [...PQS,...CQS,...GQS].forEach(q=>{if(FIELD_IDS[q.id]){const i=ans[q.id];d.append(FIELD_IDS[q.id],i!==undefined?q.opts[i]:"");}});
+  d.append(FIELD_IDS.d1Score,(res.dimScores.d1||0).toFixed(2));d.append(FIELD_IDS.d2Score,(res.dimScores.d2||0).toFixed(2));
+  d.append(FIELD_IDS.d3Score,(res.dimScores.d3||0).toFixed(2));d.append(FIELD_IDS.d4Score,(res.dimScores.d4||0).toFixed(2));
+  d.append(FIELD_IDS.d5Score,(res.dimScores.d5||0).toFixed(2));d.append(FIELD_IDS.overallLevel,LL[res.profLevel]);
+  d.append(FIELD_IDS.recommendedTrack,"Track "+res.primary+": "+TRACKS[res.primary].name);
+  d.append(FIELD_IDS.secondaryTrack,res.secondary?"Track "+res.secondary+": "+TRACKS[res.secondary].name:"None");
+  const ifr=document.createElement("iframe");ifr.name="hif";ifr.style.display="none";document.body.appendChild(ifr);
+  const f=document.createElement("form");f.method="POST";f.action=GOOGLE_FORM_URL;f.target="hif";
+  for(const[k,v]of d.entries()){const inp=document.createElement("input");inp.type="hidden";inp.name=k;inp.value=v;f.appendChild(inp);}
+  document.body.appendChild(f);f.submit();setTimeout(()=>{try{document.body.removeChild(f);document.body.removeChild(ifr);}catch(e){}},3000);
+}
+
+// ═══ STYLES ═══
+const S={
+  wrap:{maxWidth:680,margin:"0 auto",padding:"32px 16px 40px"},
+  card:{background:C.white,borderRadius:10,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",border:"1px solid "+C.borderLight},
+  btn:(bg,dis)=>({padding:"10px 24px",borderRadius:8,fontSize:13,fontWeight:700,color:C.white,border:"none",background:dis?C.textMuted:bg,cursor:dis?"not-allowed":"pointer"}),
+  btnOut:{padding:"10px 20px",borderRadius:8,fontSize:13,fontWeight:600,border:"1px solid "+C.border,background:C.white,color:C.textLight,cursor:"pointer"},
+  input:{width:"100%",padding:"10px 14px",borderRadius:8,fontSize:14,border:"1px solid "+C.border,background:C.cream,color:C.text,outline:"none"},
+};
+const totalQs=PQS.length+CQS.length+GQS.length;
+
+function QCard({q,answer,onAnswer,badge}){
+  return React.createElement("div",{style:{marginBottom:20,paddingBottom:20,borderBottom:"1px solid "+C.borderLight}},
+    badge&&React.createElement("span",{style:{display:"inline-block",fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:4,background:badge.color+"12",color:badge.color,marginBottom:8}},badge.label),
+    React.createElement("p",{style:{fontSize:14,fontWeight:500,color:C.text,lineHeight:1.65,marginBottom:10}},q.text),
+    React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+      q.opts.map((o,i)=>React.createElement("button",{key:i,onClick:()=>onAnswer(q.id,i),style:{textAlign:"left",padding:"10px 14px",borderRadius:8,fontSize:13,lineHeight:1.55,cursor:"pointer",background:answer===i?C.navy:C.cream,color:answer===i?C.white:C.text,border:answer===i?"1.5px solid "+C.navy:"1px solid "+C.border}},o))
+    )
+  );
+}
+
+function App(){
+  const[step,setStep]=useState(0);
+  const[ans,setAns]=useState({});
+  const[res,setRes]=useState(null);
+  const[pi,setPi]=useState({name:"",campus:"",email:"",assessmentType:"Pre-Assessment"});
+  const[sub,setSub]=useState(false);
+  const ref=useRef(null);
+  const up=()=>setTimeout(()=>ref.current&&ref.current.scrollIntoView({behavior:"smooth"}),50);
+  const sa=(id,v)=>setAns(p=>({...p,[id]:v}));
+  const cp=qs=>qs.every(q=>ans[q.id]!==undefined);
+  const fin=()=>{const r=compute(ans);setRes(r);setStep(4);up();if(!sub){submitForm(pi,ans,r);setSub(true);}};
+  const rst=()=>{setStep(0);setAns({});setRes(null);setPi({name:"",campus:"",email:"",assessmentType:"Pre-Assessment"});setSub(false);up();};
+  const aCt=Object.keys(ans).length;
+
+  // ── Collapsible ──
+  function Coll({title,preview,children}){
+    return React.createElement("details",{style:{border:"1px solid "+C.border,borderRadius:10,overflow:"hidden",marginBottom:12,background:C.white}},
+      React.createElement("summary",{style:{padding:"16px 20px",cursor:"pointer"}},
+        React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          React.createElement("div",{style:{flex:1}},
+            React.createElement("p",{style:{fontSize:15,fontWeight:700,color:C.navy,margin:0}},title),
+            React.createElement("p",{style:{fontSize:12,color:C.textMuted,margin:"4px 0 0",lineHeight:1.5}},preview)
+          ),
+          React.createElement("svg",{className:"chv",width:18,height:18,viewBox:"0 0 18 18",fill:"none",style:{flexShrink:0,marginLeft:12}},
+            React.createElement("path",{d:"M4.5 6.75L9 11.25L13.5 6.75",stroke:C.navy,strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"})
+          )
+        )
+      ),
+      React.createElement("div",{style:{padding:"0 20px 16px"}},children)
+    );
+  }
+
+  // ── Progress bar ──
+  function Prog(){
+    return React.createElement("div",null,
+      React.createElement("div",{style:{display:"flex",justifyContent:"center",gap:8,marginBottom:16}},
+        [{s:1,l:"Proficiency"},{s:2,l:"Context"},{s:3,l:"Goals"}].map(({s,l})=>
+          React.createElement("div",{key:s,style:{display:"flex",alignItems:"center",gap:6}},
+            React.createElement("div",{style:{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:step>=s?C.navy:C.border,color:step>=s?C.white:C.textMuted,fontSize:12,fontWeight:700}},s),
+            React.createElement("span",{style:{fontSize:12,fontWeight:500,color:step>=s?C.navy:C.textMuted}},l),
+            s<3&&React.createElement("div",{style:{width:16,height:1,background:C.border}})
+          )
+        )
+      ),
+      React.createElement("p",{style:{textAlign:"center",fontSize:11,color:C.textMuted,marginBottom:16}},aCt+" of "+totalQs+" answered")
+    );
+  }
+
+  // ── Footer ──
+  function Foot(){
+    return React.createElement("div",{style:{textAlign:"center",marginTop:32,paddingTop:16,borderTop:"1px solid "+C.border}},
+      React.createElement("p",{style:{fontSize:11,color:C.textMuted,margin:0}},"LARC AI Literacy & Innovation Program · Long Beach City College · Lead Institution")
+    );
+  }
+
+  // ── Nav buttons ──
+  function Nav({onBack,onNext,nextLabel,nextDisabled}){
+    return React.createElement("div",{style:{display:"flex",justifyContent:"space-between"}},
+      React.createElement("button",{onClick:onBack,style:S.btnOut},"\u2190 Back"),
+      React.createElement("button",{onClick:onNext,disabled:nextDisabled,style:S.btn(C.navy,nextDisabled)},nextLabel||"Continue \u2192")
+    );
+  }
+
+  // ══════ RENDER ══════
+  return React.createElement("div",{ref:ref,style:{minHeight:"100vh",background:"#EFF1F4"}},
+    React.createElement("div",{style:S.wrap},
+      React.createElement("p",{style:{textAlign:"center",fontSize:11,fontWeight:700,letterSpacing:"0.14em",textTransform:"uppercase",color:C.navy,margin:"0 0 24px"}},"LARC AI Literacy & Innovation Program"),
+
+      // ═══ LANDING ═══
+      step===0&&React.createElement("div",null,
+        // Hero
+        React.createElement("div",{style:{...S.card,background:C.navy,color:C.white,padding:"36px 32px 28px",marginBottom:16,textAlign:"center",border:"none"}},
+          React.createElement("h1",{style:{fontSize:26,fontWeight:700,margin:"0 0 8px",lineHeight:1.25}},"AI Readiness Assessment"),
+          React.createElement("p",{style:{fontSize:15,color:"#B8CCE0",margin:"0 0 20px",lineHeight:1.6}},"Find the right starting point in the LARC program based on your current AI proficiency, professional context, and goals."),
+          React.createElement("div",{style:{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}},
+            [totalQs+" Questions","3 Sections","~8 Minutes"].map(t=>React.createElement("span",{key:t,style:{fontSize:12,fontWeight:600,padding:"4px 12px",borderRadius:20,border:"1px solid #5A89B3",color:"#B8CCE0"}},t))
+          )
+        ),
+        // Collapsibles
+        React.createElement(Coll,{title:"What We Assess",preview:"Your proficiency is measured across the Chancellor's Office D1–D5 AI Competency Framework."},
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
+            DIMS.map(d=>React.createElement("div",{key:d.id,style:{padding:"10px 12px",borderRadius:8,borderLeft:"3px solid "+d.color,background:d.color+"06"}},
+              React.createElement("p",{style:{fontSize:11,fontWeight:700,color:d.color,margin:"0 0 2px"}},d.label),
+              React.createElement("p",{style:{fontSize:12,color:C.textMid,margin:0,lineHeight:1.45}},d.what)
+            ))
+          )
+        ),
+        React.createElement(Coll,{title:"How It Works",preview:"Three sections — proficiency self-assessment, professional context, and goals — answered in sequence."},
+          React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+            [{n:"1",t:"AI Proficiency",c:PQS.length+" questions",d:"Knowledge of AI concepts, tools, prompt engineering, output evaluation, ethics, and discipline-specific applications."},
+             {n:"2",t:"Professional Context",c:CQS.length+" questions",d:"Teaching status, curriculum involvement, PD leadership, and tool experience."},
+             {n:"3",t:"Your Goals",c:GQS.length+" questions",d:"What you want to accomplish — credentials, classroom deployment, curriculum revision, or PD leadership."}
+            ].map(s=>React.createElement("div",{key:s.n,style:{display:"flex",gap:12,alignItems:"flex-start",padding:"10px 12px",borderRadius:8,background:C.cream}},
+              React.createElement("div",{style:{width:28,height:28,borderRadius:"50%",background:C.navy,color:C.white,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}},s.n),
+              React.createElement("div",null,
+                React.createElement("div",{style:{display:"flex",alignItems:"baseline",gap:8}},
+                  React.createElement("p",{style:{fontSize:13,fontWeight:600,color:C.text,margin:0}},s.t),
+                  React.createElement("span",{style:{fontSize:11,color:C.textMuted}},s.c)
+                ),
+                React.createElement("p",{style:{fontSize:12,color:C.textLight,margin:"2px 0 0",lineHeight:1.5}},s.d)
+              )
+            ))
+          )
+        ),
+        // Report preview
+        React.createElement("div",{style:{...S.card,padding:"20px 24px",marginBottom:20}},
+          React.createElement("h2",{style:{fontSize:15,fontWeight:700,color:C.navy,margin:"0 0 4px"}},"Your Personalized Report"),
+          React.createElement("p",{style:{fontSize:12,color:C.textMuted,margin:"0 0 14px",lineHeight:1.5}},"Based on your responses, the assessment generates a detailed report with four components."),
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
+            [{l:"Proficiency Profile",d:"D1–D5 competency scores with level indicators"},{l:"Track Recommendation",d:"Your ideal starting track with written rationale"},{l:"Pathway Map",d:"Phases and milestones of your recommended track"},{l:"Resource Links",d:"Personalized tools, credentials, and program elements"}].map((item,i)=>
+              React.createElement("div",{key:i,style:{padding:"12px 14px",borderRadius:8,background:C.cream}},
+                React.createElement("p",{style:{fontSize:13,fontWeight:700,color:C.navy,margin:"0 0 4px"}},item.l),
+                React.createElement("p",{style:{fontSize:11,color:C.textLight,margin:0,lineHeight:1.45}},item.d)
+              )
+            )
+          )
+        ),
+        // CTA
+        React.createElement("div",{style:{textAlign:"center",marginBottom:16}},
+          React.createElement("button",{onClick:()=>setStep(0.5),style:{padding:"14px 40px",borderRadius:8,fontSize:15,fontWeight:700,color:C.white,background:C.navy,border:"none",cursor:"pointer"}},"Begin Assessment \u2192"),
+          React.createElement("p",{style:{fontSize:11,color:C.textMuted,marginTop:8}},"Your responses are used for program evaluation only.")
+        ),
+        React.createElement("div",{style:{textAlign:"center",paddingTop:12,borderTop:"1px solid "+C.border}},
+          React.createElement("a",{href:DASHBOARD_URL,style:{fontSize:13,fontWeight:600,color:C.navy,textDecoration:"none"}},"\u2190 Return to Program Dashboard")
+        )
+      ),
+
+      // ═══ PARTICIPANT INFO ═══
+      step===0.5&&React.createElement("div",null,
+        React.createElement("div",{style:{...S.card,padding:28,marginBottom:16}},
+          React.createElement("h2",{style:{fontSize:18,fontWeight:700,color:C.navy,margin:"0 0 4px"}},"Before We Begin"),
+          React.createElement("p",{style:{fontSize:13,color:C.textMuted,margin:"0 0 20px",lineHeight:1.6}},"This information helps us track participation and measure growth over time. Your responses are stored securely and used only for program evaluation."),
+          React.createElement("div",{style:{marginBottom:16}},
+            React.createElement("label",{style:{display:"block",fontSize:13,fontWeight:600,color:C.text,marginBottom:6}},"Your Name ",React.createElement("span",{style:{color:C.d4}},"*")),
+            React.createElement("input",{type:"text",value:pi.name,onChange:e=>setPi(p=>({...p,name:e.target.value})),placeholder:"First and Last Name",style:S.input})
+          ),
+          React.createElement("div",{style:{marginBottom:16}},
+            React.createElement("label",{style:{display:"block",fontSize:13,fontWeight:600,color:C.text,marginBottom:6}},"Campus ",React.createElement("span",{style:{color:C.d4}},"*")),
+            React.createElement("input",{type:"text",value:pi.campus,onChange:e=>setPi(p=>({...p,campus:e.target.value})),placeholder:"e.g., Long Beach City College",style:S.input})
+          ),
+          React.createElement("div",{style:{marginBottom:16}},
+            React.createElement("label",{style:{display:"block",fontSize:13,fontWeight:600,color:C.text,marginBottom:6}},"Email ",React.createElement("span",{style:{color:C.textMuted,fontWeight:400}},"(optional)")),
+            React.createElement("input",{type:"email",value:pi.email,onChange:e=>setPi(p=>({...p,email:e.target.value})),placeholder:"your.email@college.edu",style:S.input})
+          ),
+          React.createElement("div",{style:{marginBottom:8}},
+            React.createElement("label",{style:{display:"block",fontSize:13,fontWeight:600,color:C.text,marginBottom:8}},"Assessment Type ",React.createElement("span",{style:{color:C.d4}},"*")),
+            React.createElement("div",{style:{display:"flex",gap:8}},
+              ["Pre-Assessment","Post-Assessment"].map(t=>React.createElement("button",{key:t,onClick:()=>setPi(p=>({...p,assessmentType:t})),style:{flex:1,padding:"12px 16px",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",background:pi.assessmentType===t?C.navy:C.cream,color:pi.assessmentType===t?C.white:C.text,border:pi.assessmentType===t?"1.5px solid "+C.navy:"1px solid "+C.border}},t))
+            ),
+            React.createElement("p",{style:{fontSize:11,color:C.textMuted,margin:"8px 0 0",lineHeight:1.5}},pi.assessmentType==="Pre-Assessment"?"Select this if you are taking the assessment for the first time.":"Select this if you have completed a track and are reassessing to measure growth.")
+          )
+        ),
+        React.createElement(Nav,{onBack:()=>setStep(0),onNext:()=>{setStep(1);up();},nextLabel:"Continue to Assessment \u2192",nextDisabled:!pi.name.trim()||!pi.campus.trim()})
+      ),
+
+      // ═══ QUESTIONS (steps 1-3) ═══
+      step>=1&&step<=3&&React.createElement("div",null,
+        React.createElement(Prog),
+        React.createElement("div",{style:{...S.card,padding:"24px 28px",marginBottom:16}},
+          step===1&&React.createElement("div",null,
+            React.createElement("h2",{style:{fontSize:16,fontWeight:700,color:C.navy,margin:"0 0 4px"}},"Section 1: AI Proficiency"),
+            React.createElement("p",{style:{fontSize:12,color:C.textMuted,margin:"0 0 20px"}},"Select the statement that best describes where you are today."),
+            PQS.map(q=>{const dm=DIMS.find(d=>d.id===q.dim);return React.createElement(QCard,{key:q.id,q:q,answer:ans[q.id],onAnswer:sa,badge:dm?{label:dm.label,color:dm.color}:null});})
+          ),
+          step===2&&React.createElement("div",null,
+            React.createElement("h2",{style:{fontSize:16,fontWeight:700,color:C.navy,margin:"0 0 4px"}},"Section 2: Professional Context"),
+            React.createElement("p",{style:{fontSize:12,color:C.textMuted,margin:"0 0 20px"}},"Your current role, institutional context, and tool experience."),
+            CQS.map(q=>React.createElement(QCard,{key:q.id,q:q,answer:ans[q.id],onAnswer:sa}))
+          ),
+          step===3&&React.createElement("div",null,
+            React.createElement("h2",{style:{fontSize:16,fontWeight:700,color:C.navy,margin:"0 0 4px"}},"Section 3: Your Goals"),
+            React.createElement("p",{style:{fontSize:12,color:C.textMuted,margin:"0 0 20px"}},"What you want to accomplish through the program."),
+            GQS.map(q=>React.createElement(QCard,{key:q.id,q:q,answer:ans[q.id],onAnswer:sa}))
+          )
+        ),
+        React.createElement(Nav,{onBack:()=>{setStep(step===1?0.5:step-1);up();},onNext:step<3?()=>{setStep(step+1);up();}:fin,nextLabel:step<3?"Continue \u2192":"See My Results \u2192",nextDisabled:!cp(step===1?PQS:step===2?CQS:GQS)})
+      ),
+
+      // ═══ RESULTS ═══
+      step===4&&res&&React.createElement("div",null,
+        // Proficiency
+        React.createElement("div",{style:{...S.card,padding:28,marginBottom:16,textAlign:"center"}},
+          React.createElement("p",{style:{fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:C.textMuted,margin:"0 0 8px"}},"Your AI Proficiency Level"),
+          React.createElement("div",{style:{display:"inline-block",padding:"8px 24px",borderRadius:24,fontSize:20,fontWeight:700,marginBottom:20,background:LC[res.profLevel]+"10",color:LC[res.profLevel],border:"2px solid "+LC[res.profLevel]+"25"}},LL[res.profLevel]),
+          React.createElement("div",{style:{maxWidth:400,margin:"0 auto",textAlign:"left"}},
+            DIMS.map(d=>{const lv=s2l(res.dimScores[d.id]);return React.createElement("div",{key:d.id,style:{marginBottom:10}},
+              React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},
+                React.createElement("span",{style:{fontSize:12,fontWeight:600,color:d.color}},d.label),
+                React.createElement("span",{style:{fontSize:11,fontWeight:600,color:LC[lv]}},LL[lv])
+              ),
+              React.createElement("div",{style:{height:8,borderRadius:4,background:"#f0f0f0"}},
+                React.createElement("div",{style:{height:8,borderRadius:4,width:Math.max(8,(res.dimScores[d.id]/3)*100)+"%",background:d.color,transition:"width 0.6s ease"}})
+              )
+            );})
+          )
+        ),
+        // Primary track
+        React.createElement("div",{style:{...S.card,overflow:"hidden",marginBottom:16}},
+          React.createElement("div",{style:{padding:"20px 24px",background:TRACKS[res.primary].color,color:C.white}},
+            React.createElement("p",{style:{fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",opacity:0.65,margin:"0 0 4px"}},"Recommended Starting Track"),
+            React.createElement("h2",{style:{fontSize:20,fontWeight:700,margin:0}},"Track "+res.primary+": "+TRACKS[res.primary].name),
+            React.createElement("p",{style:{fontSize:13,margin:"4px 0 0",opacity:0.8}},TRACKS[res.primary].audience)
+          ),
+          React.createElement("div",{style:{padding:"20px 24px"}},
+            React.createElement("p",{style:{fontSize:14,color:C.text,lineHeight:1.7,marginBottom:12}},TRACKS[res.primary].desc),
+            React.createElement("p",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:TRACKS[res.primary].color,marginBottom:12}},"Exit Credential: "+TRACKS[res.primary].exit),
+            React.createElement("p",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,marginBottom:8}},"Track Phases"),
+            TRACKS[res.primary].phases.map((ph,i)=>React.createElement("div",{key:i,style:{display:"flex",gap:10,alignItems:"flex-start",marginBottom:8}},
+              React.createElement("div",{style:{width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,background:TRACKS[res.primary].color+"12",color:TRACKS[res.primary].color}},i+1),
+              React.createElement("p",{style:{fontSize:13,color:C.textMid,lineHeight:1.5,margin:0}},ph)
+            ))
+          )
+        ),
+        // Secondary
+        res.secondary&&React.createElement("div",{style:{...S.card,padding:"20px 24px",marginBottom:16,borderLeft:"4px solid "+TRACKS[res.secondary].color}},
+          React.createElement("p",{style:{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:TRACKS[res.secondary].color,margin:"0 0 4px"}},"Also Consider"),
+          React.createElement("h3",{style:{fontSize:15,fontWeight:700,margin:"0 0 4px"}},"Track "+res.secondary+": "+TRACKS[res.secondary].name),
+          React.createElement("p",{style:{fontSize:13,color:C.textLight,lineHeight:1.55,margin:0}},TRACKS[res.secondary].desc)
+        ),
+        // Rationale
+        React.createElement("div",{style:{...S.card,padding:"20px 24px",marginBottom:16}},
+          React.createElement("h3",{style:{fontSize:15,fontWeight:700,color:C.navy,margin:"0 0 12px"}},"Why This Recommendation"),
+          res.rationale.map((r,i)=>React.createElement("p",{key:i,style:{fontSize:13,color:C.textMid,lineHeight:1.7,marginBottom:10}},r))
+        ),
+        // Resources
+        React.createElement("div",{style:{...S.card,padding:"20px 24px",marginBottom:16}},
+          React.createElement("h3",{style:{fontSize:15,fontWeight:700,color:C.navy,margin:"0 0 4px"}},"Recommended Program Resources"),
+          React.createElement("p",{style:{fontSize:11,color:C.textMuted,margin:"0 0 14px"}},"Mapped to your proficiency, goals, and recommended track."),
+          res.resources.map(rk=>{const r=RES[rk];if(!r)return null;return React.createElement("div",{key:rk,style:{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:8,background:C.cream,border:"1px solid "+C.borderLight,marginBottom:6}},
+            React.createElement("div",{style:{flex:1}},
+              React.createElement("p",{style:{fontSize:13,fontWeight:600,color:C.text,margin:0}},r.name),
+              React.createElement("p",{style:{fontSize:11,color:C.textMuted,margin:"2px 0 0",lineHeight:1.4}},r.desc)
+            ),
+            r.url&&React.createElement("a",{href:r.url,target:"_blank",rel:"noopener noreferrer",style:{flexShrink:0,padding:"6px 12px",borderRadius:6,fontSize:11,fontWeight:700,background:C.navy,color:C.white,textDecoration:"none"}},"Open \u2192")
+          );})
+        ),
+        // Flexibility
+        React.createElement("div",{style:{...S.card,padding:"16px 20px",marginBottom:16,background:"#FFF8E1",borderColor:"#E8D0A0"}},
+          React.createElement("p",{style:{fontSize:13,fontWeight:700,color:C.t3,margin:"0 0 6px"}},"About Track Flexibility"),
+          React.createElement("p",{style:{fontSize:12,color:C.textLight,lineHeight:1.6,margin:0}},"Tracks are parallel entry points, not sequential steps. Your recommendation reflects where you are now — explore additional tracks anytime.")
+        ),
+        // Submission confirmation
+        React.createElement("div",{style:{...S.card,padding:"14px 20px",marginBottom:16,background:"#EDF7F4",borderColor:"#B8DFD2"}},
+          React.createElement("p",{style:{fontSize:12,color:C.t4,margin:0,lineHeight:1.5}},sub?"Your assessment results have been recorded for program evaluation. Retake this assessment after completing your track to measure growth.":"Recording your results...")
+        ),
+        // Actions
+        React.createElement("div",{style:{textAlign:"center",marginBottom:16}},
+          React.createElement("button",{onClick:rst,style:S.btnOut},"\u2190 Retake Assessment")
+        ),
+        React.createElement("div",{style:{textAlign:"center",paddingTop:12,borderTop:"1px solid "+C.border}},
+          React.createElement("a",{href:DASHBOARD_URL,style:{fontSize:13,fontWeight:600,color:C.navy,textDecoration:"none"}},"\u2190 Return to Program Dashboard")
+        )
+      ),
+
+      React.createElement(Foot)
+    )
+  );
+}
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+  </script>
+</body>
+</html>
