@@ -21,10 +21,12 @@
 </head>
 <body>
   <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
     // PDF generation — plain JS, no Babel needed
     window.generatePDF = function(pi, res, TRACKS_DATA, DIMS_DATA, RES_DATA, LL_DATA, s2lFn) {
+      try {
+      if (!window.jspdf || !window.jspdf.jsPDF) { alert("PDF library failed to load. Please try refreshing the page."); return; }
       var jsPDF = window.jspdf.jsPDF;
       var doc = new jsPDF({orientation:"portrait",unit:"mm",format:"letter"});
       var W=215.9, M=20, CW=W-2*M, y=0;
@@ -150,6 +152,7 @@
 
       var fname = "LARC-AI-Assessment-"+pi.name.replace(/\s+/g,"-")+"-"+pi.assessmentType.replace(/\s+/g,"-")+".pdf";
       doc.save(fname);
+      } catch(e) { alert("PDF generation error: "+e.message); console.error(e); }
     };
   </script>
   <script type="text/babel">
